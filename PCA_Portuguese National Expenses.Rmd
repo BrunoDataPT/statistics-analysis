@@ -1,0 +1,203 @@
+---
+title: "Principal Component Analysis of Portuguese National Expenses"
+---
+
+Analysis of the dataset of national expenses in percentage
+
+Importing dataset from excel and visualizing. Data originally from PORDATA (http://www.pordata.pt)
+```{r}
+library(readxl)
+
+df <- read_excel("C:/PCA_Portuguese National Expenses")
+
+row.names(df) <- df$Anos
+head(df)
+
+```
+
+### Summary Univariate Statistics
+
+```{r}
+library(psych)
+describe(df[,-1])
+
+```
+
+Histograms of all the variables to check distribution
+
+```{r}
+
+library(reshape2)
+
+multi.hist(df[,2:6], main=" ")
+multi.hist(df[,7:11], main=" ")
+
+```
+Boxplot with all the variables to check their differences
+
+
+```{r}
+library(ggplot2)
+ggplot(stack(df[,-1]), aes(x = ind, y = values)) + geom_boxplot()
+```
+
+
+
+### Bivariate Statistics
+
+Calculating the correlation matrix.
+
+```{r}
+cor.mat <- round(cor(df[,-1]),2)
+head(cor.mat)
+
+```
+
+```{r}
+library("corrplot")
+corrplot(cor.mat, type="lower", tl.col="black", tl.srt=45)
+
+```
+
+### PCA
+
+Applying PCA with correlation matrix and plotting the individuals factor map and variables correlation circle
+
+```{r}
+library(FactoMineR)
+
+#Standartized data - Using correlation matrix
+res.pca <- PCA(df[,-1], scale.unit=TRUE, ncp=5, graph=T)
+```
+
+Checking the eigenvalues and getting the scree plot
+
+```{r}
+res.pca$eig
+
+barplot(res.pca$eig[, 2], names.arg=1:nrow(res.pca$eig), 
+        main = "Scree Plot",
+        xlab = "Principal Components",
+        ylab = "Percentage of inertia",
+        col ="steelblue")
+lines(x = 1:nrow(res.pca$eig), res.pca$eig[, 2], 
+      type="b", pch=19, col = "red")
+```
+#### Variables PCA Analysis
+
+CTA - (Absolute) Contributions of Variables to the Principal Components
+
+```{r}
+library("factoextra")
+fviz_contrib(res.pca, choice = "var", axes = 1) + ggtitle("CTA Axis 1")
+fviz_contrib(res.pca, choice = "var", axes = 2) + ggtitle("CTA Axis 2")
+```
+#### PCA Variables Output - 2 Axis
+
+Making a variable table output for interpretation with Coordinates, CTA, CTR and CTR Sum of the principal plan. I use this output in a table form with all analysis together since it's easy to interpret and export to any document. 
+
+CTA - (Absolute) Contributions of Variables to the Principal Components
+CTR - (Relative) Contributions of the axis to the variables (Quality of Representation)
+
+
+```{r}
+vardf_2 <- data.frame(res.pca$var$coord[,1:2], res.pca$var$contrib[,1:2], res.pca$var$cos2[,1:2]*100)
+colnames(vardf_2) <- c('PC1', 'PC2', 'CTA1', 'CTA2', 'CTR1', 'CTR2')
+
+#reordering the variable dataframe
+vardf_2 <- vardf_2[,c(1,3,5,2,4,6)]
+
+#rounding to 2 decimal places
+vardf_2 <- round(vardf_2,2)
+
+#Adding CTR Sum for Quality of Representation
+vardf_2[7] <- vardf_2[3] + vardf_2[6]
+colnames(vardf_2)[colnames(vardf_2) == 'CTR1.1'] <- 'CTR Sum'
+vardf_2
+
+write.table(vardf_2, "d:/mydata.txt", sep="\t")
+
+```
+
+#### PCA Variables Output - 3 Axis
+
+```{r}
+vardf_3 <- data.frame(res.pca$var$coord[,1:3],res.pca$var$contrib[,1:3], res.pca$var$cos2[,1:3]*100)
+colnames(vardf_3) <- c('PC1', 'PC2', 'PC3', 'CTA1', 'CTA2', 'CTA3', 'CTR1', 'CTR2', 'CTR3')
+
+#reordering the variable dataframe
+vardf_3 <- vardf_3[,c(1,4,7,2,5,8,3,6,9)]
+
+#rounding to 2 decimal places
+vardf_3 <- round(vardf_3,2)
+
+#Adding CTR Sum for Quality of Representation
+vardf_3[10] <- vardf_3[3] + vardf_3[6] + vardf_3[9]
+colnames(vardf_3)[colnames(vardf_3) == 'CTR1.1'] <- 'CTR Sum'
+
+vardf_3
+```
+#### Individuals PCA Analysis
+
+
+CTA - (Absolute) Contributions of Individuals to the Principal Components
+
+
+```{r}
+fviz_contrib(res.pca, choice = "ind", axes = 1) + ggtitle("CTA Axis 1")
+fviz_contrib(res.pca, choice = "ind", axes = 2) + ggtitle("CTA Axis 2")
+```
+
+#### PCA Individuals Output - 2 Axis
+
+Making an individual table output for interpretation with Coordinates, CTA, CTR, CTR Sum of the principal plan
+
+```{r}
+inddf_2 <- data.frame(res.pca$ind$coord[,1:2],res.pca$ind$contrib[,1:2], res.pca$ind$cos2[,1:2]*100)
+colnames(inddf_2) <- c('PC1', 'PC2', 'CTA1', 'CTA2', 'CTR1', 'CTR2')
+
+#reordering the variable dataframe
+inddf_2 <- inddf_2[,c(1,3,5,2,4,6)]
+
+#rounding to 2 decimal places
+inddf_2 <- round(inddf_2,2)
+
+#Adding CTR Sum for Quality of Representation
+inddf_2[7] <- inddf_2[3] + inddf_2[6]
+colnames(inddf_2)[colnames(inddf_2) == 'CTR1.1'] <- 'CTR Sum'
+rownames(inddf_2) <- df$Anos
+
+inddf_2
+
+```
+#### PCA Individuals Output - 3 Axis
+
+```{r}
+inddf_3 <- data.frame(res.pca$ind$coord[,1:3],res.pca$ind$contrib[,1:3], res.pca$ind$cos2[,1:3]*100)
+colnames(inddf_3) <- c('PC1', 'PC2', 'PC3', 'CTA1', 'CTA2', 'CTA3', 'CTR1', 'CTR2', 'CTR3')
+
+#reordering the variable dataframe
+inddf_3 <- inddf_3[,c(1,4,7,2,5,8,3,6,9)]
+
+#rounding to 2 decimal places
+inddf_3 <- round(inddf_3,2)
+
+#Adding CTR Sum for Quality of Representation
+inddf_3[10] <- inddf_3[3] + inddf_3[6] + inddf_3[9]
+colnames(inddf_3)[colnames(inddf_3) == 'CTR1.1'] <- 'CTR Sum'
+rownames(inddf_3) <- df$Anos
+
+inddf_3
+```
+#### Correlation Circle
+
+Correlation of variables with principal components 1 and 2 (Correlation Circle)
+
+```{r}
+res.desc <- dimdesc(res.pca, axes = 1:2, proba = 0.05)
+res.desc$Dim.1
+res.desc$Dim.2
+
+```
+
+
